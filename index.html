@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fireworks For You</title>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #000;
+  height: 100%;
+  font-family: "Poppins", sans-serif;
+}
+
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Message Style */
+#message {
+  position: absolute;
+  top: 50%;
+  width: 100%;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 2s ease-in-out;
+}
+
+#message.show {
+  opacity: 1;
+}
+</style>
+</head>
+
+<body>
+<div id="message"></div>
+<canvas id="fireworks"></canvas>
+
+<script>
+// -------------------- SETUP --------------------
+
+const canvas = document.getElementById("fireworks");
+const ctx = canvas.getContext("2d");
+const messageBox = document.getElementById("message");
+
+let w = canvas.width = window.innerWidth;
+let h = canvas.height = window.innerHeight;
+
+window.addEventListener("resize", () => {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+});
+
+const messages = [
+  "Watching this together would be my dream come true.",
+  "You make everything feel magical.",
+  "I wish you could see this with me.",
+  "This moment feels like you.",
+  "If only you were here beside me."
+];
+
+let messageIndex = 0;
+
+// -------------------- FIREWORKS ENGINE --------------------
+
+const particles = [];
+const rockets = [];
+
+function random(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+// Heart shape coordinates using math formula
+function heartShape(angle) {
+  const r = 10; // controls size
+  const x = r * 16 * Math.pow(Math.sin(angle), 3);
+  const y = -r * (13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 
+                  2 * Math.cos(3 * angle) - Math.cos(4 * angle));
+  return { x, y };
+}
+
+class Rocket {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.speed = random(6, 9);
+    this.angle = random(-Math.PI, -Math.PI / 3);
+    this.vx = Math.cos(this.angle) * this.speed;
+    this.vy = Math.sin(this.angle) * this.speed;
+    this.color = `hsl(${random(0,360)},100%,55%)`;
+    this.isHeart = Math.random() < 0.3; // 30% heart fireworks
+    this.exploded = false;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.12;
+
+    if (this.vy >= 0) this.explode();
+  }
+
+  explode() {
+    this.exploded = true;
+
+    if (this.isHeart) {
+      // Heart-shaped particles
+      for (let i = 0; i < 100; i++) {
+        const angle = random(0, 2 * Math.PI);
+        const hPoint = heartShape(angle);
+        particles.push(new Particle(
+          this.x + hPoint.x,
+          this.y + hPoint.y,
+          this.color,
+          true
+        ));
+      }
+    } else {
+      // Normal big fireworks
+      for (let i = 0; i < 120; i++) {
+        particles.push(new Particle(this.x, this.y, this.color, false));
+      }
+    }
+  }
+
+  draw() {
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x, this.y, 4, 12);
+  }
+}
+
+class Particle {
+  constructor(x, y, color, heart) {
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.alpha = 1;
+    this.decay = random(0.007, 0.015);
+
+    if (heart) {
+      this.vx = random(-1.5, 1.5);
+      this.vy = random(-1.5, 1.5);
+    } else {
+      const speed = random(3, 7);
+      const angle = random(0, Math.PI * 2);
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed;
+    }
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.05;
+    this.alpha -= this.decay;
+  }
+
+  draw() {
+    ctx.globalAlpha = this.alpha;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 3.5, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function loop() {
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.fillRect(0, 0, w, h);
+
+  rockets.forEach((r, i) => {
+    r.update();
+    r.draw();
+    if (r.exploded) rockets.splice(i, 1);
+  });
+
+  particles.forEach((p, i) => {
+    p.update();
+    p.draw();
+    if (p.alpha <= 0) particles.splice(i, 1);
+  });
+
+  requestAnimationFrame(loop);
+}
+
+loop();
+
+// -------------------- CLICK FIREWORKS + MESSAGES --------------------
+
+window.addEventListener("click", (e) => {
+  rockets.push(new Rocket(e.clientX, h));
+
+  // Show next message
+  messageBox.classList.remove("show");
+  void messageBox.offsetWidth;
+  messageBox.innerText = messages[messageIndex];
+  messageBox.classList.add("show");
+
+  messageIndex = (messageIndex + 1) % messages.length;
+});
+</script>
+</body>
+</html>
